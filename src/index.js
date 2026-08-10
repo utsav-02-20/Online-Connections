@@ -34,12 +34,20 @@ app.get("/:username/my_dashboard", (_req, res) => {
   res.sendFile(dashboardPage);
 });
 
-const startServer = async () => {
-  await connectDB();
+// const startServer = async () => {
+//   await connectDB();
 
-  app.listen(config.PORT, () => {
-    console.log(`Server running on port ${config.PORT}`);
-  });
-};
+//   app.listen(config.PORT, () => {
+//     console.log(`Server running on port ${config.PORT}`);
+//   });
+// };
+
+const app = express();
+
+app.get("/", (req, res) => {
+    res.send("Server is working");
+});
+
+export default app;
 
 startServer();
