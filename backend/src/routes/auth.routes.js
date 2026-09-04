@@ -1,17 +1,11 @@
 import { Router } from "express";
-import * as authController from "../controllers/auth.controller.js";
+import * as authController from "../controllers/index.js";
 
 const authRouter = Router();
 
-/**
- * POST "/api/auth/register" - is the full path of api call
- */
 authRouter.post("/register", authController.register);
 authRouter.post("/login", authController.login);
-
-/**
- * GET /api/auth/get-me
- */
+authRouter.post("/logout", authController.logout);
 authRouter.get("/get-me", authController.get_me);
 authRouter.get("/profile/:username", authController.get_public_profile);
 authRouter.patch("/profile/:username", authController.update_profile);
