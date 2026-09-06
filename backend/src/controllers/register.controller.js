@@ -66,11 +66,11 @@ export const register = async (req, res) => {
     let { username, email, password } = req.body;
 
     // Normalize input
-    username = username?.trim().toLowerCase();
-    email = email?.trim().toLowerCase();
+    username = typeof username === "string" ? username.trim().toLowerCase() : "";
+    email = typeof email === "string" ? email.trim().toLowerCase() : "";
 
     // Validate required fields
-    if (!username || !email || !password) {
+    if (!username || !email || !password || typeof password !== "string") {
       return res.status(400).json({
         success: false,
         message: "Username, email, and password are required",
@@ -119,7 +119,7 @@ export const register = async (req, res) => {
     // Store refresh token in secure cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: true,       // Set false for local HTTP development
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

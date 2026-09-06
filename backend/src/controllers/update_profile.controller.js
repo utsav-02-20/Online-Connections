@@ -31,15 +31,14 @@ function getTokenPayload(req) {
 function buildUserResponse(user) {
     return {
         id: user._id,
-        name: user.name,
         username: user.username,
         email: user.email,
-        phone: user.phone,
-        phoneVerified: user.phoneVerified,
-        address: user.address,
-        profilePic: user.profilePic,
-        about: user.about,
-        role: user.role,
+        phone: user.phone || "",
+        phoneVerified: Boolean(user.phoneVerified),
+        address: user.address || "",
+        profilePic: user.profilePic || "",
+        about: user.about || "",
+        friends: Array.isArray(user.friends) ? user.friends : [],
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     };

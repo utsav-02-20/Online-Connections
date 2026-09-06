@@ -29,21 +29,23 @@ export async function search_users(req, res) {
             });
         }
 
-        // Search usernames using case-insensitive regex
+        // Search usernames using case-insensitive regex safely
+        const safeQuery = rawQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const users = await userModel
             .find({
-                username: { $regex: rawQuery, $options: "i" },
+                username: { $regex: safeQuery, $options: "i" },
             })
-            .select("username profilePic role") // Return only required fields
+            .select("username profilePic about") // Return only required fields
             .limit(10);
 
         // Return matching users
         return res.status(200).json({
             success: true,
             users: users.map((user) => ({
+                id: user._id,
                 username: user.username,
-                profilePic: user.profilePic,
-                role: user.role,
+                profilePic: user.profilePic || "",
+                about: user.about || "",
             })),
         });
     } catch (error) {

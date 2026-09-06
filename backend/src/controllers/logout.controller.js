@@ -35,7 +35,7 @@ export const logout = async (req, res) => {
     // Remove refresh token cookie
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: true,       // false for local HTTP development
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
 

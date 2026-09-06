@@ -15,7 +15,7 @@ import connectDB from "./config/database.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const publicDir = path.join(__dirname, "..", "public");
+const publicDir = path.join(__dirname, "..", "Public");
 
 const loginPage = path.join(publicDir, "pages", "login.html");
 const userPage = path.join(publicDir, "pages", "user.html");
