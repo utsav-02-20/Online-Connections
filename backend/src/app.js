@@ -6,11 +6,24 @@ import authRouter from "./routes/auth.routes.js";
 
 const app = express();
 
-/*
-|--------------------------------------------------------------------------
-| Global Middlewares
-|--------------------------------------------------------------------------
-*/
+// CORS Middleware for Next.js frontend
+app.use((req, res, next) => {
+  const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Parse JSON request body
 app.use(express.json());

@@ -1,37 +1,41 @@
 import userModel from "../models/user.model.js";
+import jwt from "jsonwebtoken";
+import config from "../config/config.js";
 
 /*
 |--------------------------------------------------------------------------
 | Controller: Get Public User Profile
 |--------------------------------------------------------------------------
 | Route  : GET /api/auth/profile/:username
-| Access : Public (No Authentication Required)
+| Access : Public (Optional Authorization Header for isFriend & mutualFriends)
 |
 | Description:
-| - Fetches a user's public profile using their username.
-| - Excludes sensitive fields like password.
-| - Returns only public information.
+| - Fetches public profile of a user by username.
+| - Excludes private data (email, full friends array).
+| - Returns safe social metrics: friendsCount, isFriend, mutualFriends, createdAt.
 |--------------------------------------------------------------------------
 */
 
-// Helper: Return only public fields
-function buildPublicUserResponse(user) {
-  return {
-    id: user._id,
-    username: user.username,
-    email: user.email,
-    profilePic: user.profilePic || "",
-    about: user.about || "",
-    friends: Array.isArray(user.friends) ? user.friends : [],
-    createdAt: user.createdAt,
-  };
+// Helper: Extract optional JWT token if provided
+function getOptionalTokenPayload(req) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      return jwt.verify(token, config.JWT_SECRET);
+    }
+  } catch (error) {
+    // Unauthenticated request, return null
+  }
+  return null;
 }
 
 export async function get_public_profile(req, res) {
   try {
     const { username } = req.params;
+    const normalizedUsername = String(username || "").trim().toLowerCase();
 
-    const user = await userModel.findOne({ username }).select("-password");
+    const user = await userModel.findOne({ username: normalizedUsername }).select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -40,9 +44,44 @@ export async function get_public_profile(req, res) {
       });
     }
 
+    const targetFriends = Array.isArray(user.friends) ? user.friends : [];
+    const friendsCount = targetFriends.length;
+
+    let isFriend = false;
+    let mutualFriends = 0;
+
+    // Optional social graph context for logged-in viewer
+    const decoded = getOptionalTokenPayload(req);
+    if (decoded && decoded.id) {
+      const loggedInUser = await userModel.findById(decoded.id);
+      if (loggedInUser) {
+        const loggedInUsername = loggedInUser.username;
+        const loggedInFriends = Array.isArray(loggedInUser.friends)
+          ? loggedInUser.friends
+          : [];
+
+        // Check if logged-in user is friends with target user
+        isFriend = targetFriends.includes(loggedInUsername);
+
+        // Calculate count of mutual friends
+        mutualFriends = loggedInFriends.filter((f) =>
+          targetFriends.includes(f)
+        ).length;
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      user: buildPublicUserResponse(user),
+      user: {
+        id: user._id,
+        username: user.username,
+        profilePic: user.profilePic || "",
+        about: user.about || "",
+        createdAt: user.createdAt,
+        friendsCount,
+        isFriend,
+        mutualFriends,
+      },
     });
   } catch (error) {
     console.error("Public Profile Error:", error);
@@ -53,3 +92,7 @@ export async function get_public_profile(req, res) {
     });
   }
 }
+
+export default {
+  get_public_profile,
+};

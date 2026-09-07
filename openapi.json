@@ -1,0 +1,235 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Online Connections API",
+    "description": "REST API documentation for Online Connections user management, authentication, and friend network.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development Server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Server Health Check",
+        "description": "Public endpoint to check if API server is running.",
+        "responses": {
+          "200": {
+            "description": "API Server is running"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register User",
+        "description": "Creates a new user account and returns an Access Token and sets Refresh Token cookie.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "email", "password"],
+                "properties": {
+                  "username": { "type": "string", "example": "johndoe" },
+                  "email": { "type": "string", "example": "john@example.com" },
+                  "password": { "type": "string", "example": "securepassword123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User registered successfully" },
+          "400": { "description": "Missing required fields" },
+          "409": { "description": "Username or email already exists" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login User",
+        "description": "Authenticates user using email or username and password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["password"],
+                "properties": {
+                  "email": { "type": "string", "example": "john@example.com" },
+                  "username": { "type": "string", "example": "johndoe" },
+                  "password": { "type": "string", "example": "securepassword123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful" },
+          "400": { "description": "Identifier and password required" },
+          "401": { "description": "Invalid credentials" },
+          "404": { "description": "User not found" }
+        }
+      }
+    },
+    "/api/auth/profile/{username}": {
+      "get": {
+        "summary": "Get Public User Profile",
+        "description": "Fetches public profile of a user. Excludes private fields (email, full friends array). Returns privacy-safe metrics: friendsCount, isFriend, mutualFriends, createdAt.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "username": { "type": "string" },
+                        "profilePic": { "type": "string" },
+                        "about": { "type": "string" },
+                        "createdAt": { "type": "string" },
+                        "friendsCount": { "type": "integer" },
+                        "isFriend": { "type": "boolean" },
+                        "mutualFriends": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "User not found" }
+        }
+      },
+      "patch": {
+        "summary": "Update User Profile",
+        "description": "Updates authenticated user's profile details.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "phoneVerified": { "type": "boolean" },
+                  "address": { "type": "string" },
+                  "profilePic": { "type": "string" },
+                  "about": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Profile updated successfully" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden - can only update own profile" },
+          "409": { "description": "Email already in use" }
+        }
+      }
+    },
+    "/api/auth/users/search": {
+      "get": {
+        "summary": "Search Users",
+        "description": "Case-insensitive partial regex search for usernames.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Matching users list returned (max 10)" }
+        }
+      }
+    },
+    "/api/auth/get-me": {
+      "get": {
+        "summary": "Get Authenticated User Profile",
+        "description": "Fetches profile of currently logged in user.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Authenticated profile returned" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/friends/{username}/{friendUsername}": {
+      "post": {
+        "summary": "Add Friend",
+        "description": "Adds another user to the authenticated user's friends list.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "friendUsername",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Friend added successfully" },
+          "400": { "description": "Invalid friend username or self-addition" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User or friend not found" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout User",
+        "description": "Clears HTTP-Only refreshToken cookie.",
+        "responses": {
+          "200": { "description": "Logout successful" },
+          "401": { "description": "Already logged out" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

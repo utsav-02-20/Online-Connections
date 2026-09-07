@@ -1,6 +1,8 @@
-# Online Connections — Backend API Documentation & Next.js Integration Guide
+# Online Connections — Pure REST API Backend Documentation & Next.js Integration Guide
 
-This document provides a comprehensive breakdown of the **Online Connections** backend architecture, database schemas, authentication flow, complete API specifications, error handling, server-side route mappings, and essential guidelines for building the frontend application using **Next.js**.
+This document provides a comprehensive breakdown of the **Online Connections** backend architecture, database schemas, authentication flow, complete API specifications, error handling, CORS headers, and essential guidelines for building the frontend application using **Next.js**.
+
+> 📄 **OpenAPI Specification File:** [docs/openapi.json](file:///C:/Users/kumar/OneDrive/Desktop/Online-Connections/docs/openapi.json) (Import into Postman, Insomnia, or Swagger UI).
 
 ---
 
@@ -11,6 +13,7 @@ This document provides a comprehensive breakdown of the **Online Connections** b
 3. [Database Schema (User Model)](#3-database-schema-user-model)
 4. [Authentication & Authorization Flow](#4-authentication--authorization-flow)
 5. [Complete API Reference](#5-complete-api-reference)
+   - [0. Server Health Check](#0-server-health-check)
    - [1. User Registration](#1-user-registration)
    - [2. User Login](#2-user-login)
    - [3. User Logout](#3-user-logout)
@@ -20,26 +23,26 @@ This document provides a comprehensive breakdown of the **Online Connections** b
    - [7. Search Users](#7-search-users)
    - [8. Add Friend](#8-add-friend)
 6. [🚀 Next.js Frontend Integration Guide](#6--nextjs-frontend-integration-guide)
-   - [A. Next.js API Proxy Rewrites (Handling CORS & Cookies)](#a-nextjs-api-proxy-rewrites-handling-cors--cookies)
-   - [B. Authentication & Token Handling in Next.js](#b-authentication--token-handling-in-nextjs)
-   - [C. API Utility Client (Axios / Fetch Setup)](#c-api-utility-client-axios--fetch-setup)
-   - [D. Next.js App Router Structure](#d-nextjs-app-router-structure)
-7. [Express Server HTML Page Routes](#7-express-server-html-page-routes)
-8. [Frontend Input Validation Rules](#8-frontend-input-validation-rules)
-9. [Legacy Frontend Assets Reference](#9-legacy-frontend-assets-reference)
+   - [A. CORS & Credentials Support](#a-cors--credentials-support)
+   - [B. Next.js API Proxy Rewrites](#b-nextjs-api-proxy-rewrites)
+   - [C. Authentication & Token Handling in Next.js](#c-authentication--token-handling-in-nextjs)
+   - [D. API Utility Client (Axios / Fetch Setup)](#d-api-utility-client-axios--fetch-setup)
+   - [E. Recommended Next.js App Router Structure](#e-recommended-nextjs-app-router-structure)
+7. [Frontend Input Validation Rules](#7-frontend-input-validation-rules)
 
 ---
 
 ## 1. Architecture Overview
 
-- **Runtime Environment:** Node.js (ES Module format `"type": "module"`)
-- **Web Framework:** Express.js (v5.x)
-- **Database:** MongoDB with Mongoose (v9.x)
+- **Role:** Pure RESTful API Server (Sends and receives JSON data only).
+- **Runtime Environment:** Node.js (ES Module format `"type": "module"`).
+- **Web Framework:** Express.js (v5.x).
+- **Database:** MongoDB with Mongoose (v9.x).
 - **Authentication:** JWT (JSON Web Tokens) with dual token architecture:
   - **Access Token:** Short-lived (15 minutes), passed via HTTP `Authorization` header (`Bearer <token>`).
   - **Refresh Token:** Long-lived (7 days), stored in an HTTP-Only secure cookie (`refreshToken`).
-- **Password Hashing:** SHA-256 (`crypto.createHash('sha256')`)
-- **Base API Path:** `http://localhost:5000/api/auth`
+- **Password Hashing:** SHA-256 (`crypto.createHash('sha256')`).
+- **Base API Path:** `http://localhost:5000/api/auth` (Server root: `http://localhost:5000/`).
 
 ---
 
@@ -54,6 +57,7 @@ The backend relies on the following environment variables defined in `.env`:
 | `DB_NAME` | `online_connections_db` | Database name |
 | `JWT_SECRET` | `default_jwt_secret_key...` | Secret key for signing JWTs |
 | `NODE_ENV` | `development` | Environment mode (`development` / `production`) |
+| `CLIENT_URL` | `http://localhost:3000` | Frontend application URL for CORS |
 
 ---
 
@@ -105,7 +109,23 @@ interface IUser {
 
 ## 5. Complete API Reference
 
-> **Base URL:** `http://localhost:5000/api/auth`
+> **Base URL:** `http://localhost:5000`
+
+---
+
+### 0. Server Health Check
+
+- **URL:** `/`
+- **Method:** `GET`
+- **Access:** Public
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Online Connections API Server is running"
+}
+```
 
 ---
 
@@ -113,7 +133,7 @@ interface IUser {
 
 Registers a new user account.
 
-- **URL:** `/register`
+- **URL:** `/api/auth/register`
 - **Method:** `POST`
 - **Access:** Public
 
@@ -157,7 +177,7 @@ Registers a new user account.
 
 Authenticates user via username or email.
 
-- **URL:** `/login`
+- **URL:** `/api/auth/login`
 - **Method:** `POST`
 - **Access:** Public
 
@@ -203,7 +223,7 @@ Authenticates user via username or email.
 
 Logs out user and clears refresh token cookie.
 
-- **URL:** `/logout`
+- **URL:** `/api/auth/logout`
 - **Method:** `POST`
 - **Access:** Private (Cookie required)
 
@@ -227,7 +247,7 @@ Cookie: `refreshToken=<JWT_TOKEN>`
 
 Fetches profile of the currently logged-in user.
 
-- **URL:** `/get-me`
+- **URL:** `/api/auth/get-me`
 - **Method:** `GET`
 - **Access:** Private (JWT Bearer Token Required)
 
@@ -265,11 +285,11 @@ Authorization: Bearer <accessToken>
 
 ### 5. Get Public User Profile
 
-Fetches public profile of any user by username (does not require authentication).
+Fetches public profile of a user. Strictly excludes private data (`email`, full `friends` array). Returns privacy-safe social graph metrics (`friendsCount`, `isFriend`, `mutualFriends`, `createdAt`).
 
-- **URL:** `/profile/:username`
+- **URL:** `/api/auth/profile/:username`
 - **Method:** `GET`
-- **Access:** Public
+- **Access:** Public (Pass optional `Authorization: Bearer <accessToken>` header to calculate `isFriend` and `mutualFriends` context for logged-in user).
 
 #### Response (200 OK)
 ```json
@@ -278,11 +298,12 @@ Fetches public profile of any user by username (does not require authentication)
   "user": {
     "id": "64f1ab23c4567890abcdef12",
     "username": "johndoe",
-    "email": "john@example.com",
     "profilePic": "https://example.com/avatar.jpg",
     "about": "Hello world!",
-    "friends": ["alice", "bob"],
-    "createdAt": "2026-09-06T10:00:00.000Z"
+    "createdAt": "2026-09-06T10:00:00.000Z",
+    "friendsCount": 128,
+    "isFriend": true,
+    "mutualFriends": 12
   }
 }
 ```
@@ -297,7 +318,7 @@ Fetches public profile of any user by username (does not require authentication)
 
 Updates user profile fields (only allowed for the user's own profile).
 
-- **URL:** `/profile/:username`
+- **URL:** `/api/auth/profile/:username`
 - **Method:** `PATCH`
 - **Access:** Private (JWT Bearer Token Required)
 
@@ -352,7 +373,7 @@ Authorization: Bearer <accessToken>
 
 Searches for registered users by partial, case-insensitive username matching (returns up to 10 results).
 
-- **URL:** `/users/search?username=<query>`
+- **URL:** `/api/auth/users/search?username=<query>`
 - **Method:** `GET`
 - **Access:** Public
 
@@ -383,7 +404,7 @@ Searches for registered users by partial, case-insensitive username matching (re
 
 Adds a user to the authenticated user's friends list.
 
-- **URL:** `/friends/:username/:friendUsername`
+- **URL:** `/api/auth/friends/:username/:friendUsername`
 - **Method:** `POST`
 - **Access:** Private (JWT Bearer Token Required)
 
@@ -428,9 +449,15 @@ Authorization: Bearer <accessToken>
 
 ## 6. 🚀 Next.js Frontend Integration Guide
 
-### A. Next.js API Proxy Rewrites (Handling CORS & Cookies)
+### A. CORS & Credentials Support
 
-To bypass CORS restrictions and allow HTTP-Only cookies to be seamlessly passed between Next.js (running on port `3000`) and Express backend (running on port `5000`), configure rewrites in `next.config.js` (or `next.config.mjs`):
+The backend includes built-in CORS middleware configured for `http://localhost:3000` (Next.js default port) with `Access-Control-Allow-Credentials: true`.
+
+---
+
+### B. Next.js API Proxy Rewrites
+
+To cleanly proxy requests from Next.js to Express without CORS issues, configure `next.config.mjs`:
 
 ```js
 /** @type {import('next').NextConfig} */
@@ -448,24 +475,21 @@ const nextConfig = {
 export default nextConfig;
 ```
 
-This routes all `/api/*` calls made by Next.js directly to the Express backend without CORS issues.
-
 ---
 
-### B. Authentication & Token Handling in Next.js
+### C. Authentication & Token Handling in Next.js
 
 1. **Access Token Storage:**
-   - Store `accessToken` in memory or React Context / Zustand / Redux state upon successful `login` or `register`.
-   - Store user object in AuthContext for global access across Client Components.
+   - Store `accessToken` in React Context / Zustand / Redux or `localStorage` upon successful login/registration.
 
 2. **Session Persistence on Page Reload:**
-   - On app mount, call `GET /api/auth/get-me` from Next.js with `Authorization: Bearer <accessToken>`.
+   - Call `GET /api/auth/get-me` from Next.js client with `Authorization: Bearer <accessToken>`.
 
 ---
 
-### C. API Utility Client (Axios Setup Example)
+### D. API Utility Client (Axios Setup Example)
 
-Create an Axios instance at `src/lib/api.ts` (or `src/lib/api.js`):
+Create `src/lib/api.ts`:
 
 ```typescript
 import axios from 'axios';
@@ -491,9 +515,9 @@ export default api;
 
 ---
 
-### D. Next.js App Router Structure
+### E. Recommended Next.js App Router Structure
 
-Recommended Next.js 14/15 App Router directory structure for `frontend/`:
+Directory structure for `frontend/`:
 
 ```text
 frontend/
@@ -521,25 +545,7 @@ frontend/
 
 ---
 
-## 7. Express Server HTML Page Routes
-
-The backend (`src/index.js`) includes static HTML page routes serving files from `backend/Public`:
-
-| Route | Served HTML File | Target View |
-| :--- | :--- | :--- |
-| `GET /` | `Public/pages/login.html` | Landing / Login Page |
-| `GET /login` | `Public/pages/login.html` | Login View |
-| `GET /register` | `Public/pages/login.html` | Registration View |
-| `GET /:username/page_routes` | `Public/pages/user.html` | User Profile View |
-| `GET /:username/my_dashboard` | `Public/pages/dashboard.html` | User Dashboard |
-| `GET /:username/friends` | `Public/pages/dashboard.html` | Friends List View |
-| `GET /:username/settings` | `Public/pages/dashboard.html` | Profile Settings View |
-| `GET /search` | `Public/pages/user.html` | User Search View |
-| `*` (Catch-all 404) | `Public/pages/login.html` | Default 404 Fallback |
-
----
-
-## 8. Frontend Input Validation Rules
+## 7. Frontend Input Validation Rules
 
 Enforce the following client-side validation rules to match backend Mongoose constraints:
 
@@ -550,16 +556,6 @@ Enforce the following client-side validation rules to match backend Mongoose con
 | `password` | String | 8 chars | - | - |
 | `about` | String | - | 500 chars | - |
 | `profilePic` | String | - | - | Valid URL pattern |
-
----
-
-## 9. Legacy Frontend Assets Reference
-
-The backend repository contains initial static frontend scripts and HTML pages located under `backend/Public`:
-- `Public/pages/login.html` — Login/Register HTML template
-- `Public/pages/dashboard.html` — User Dashboard HTML template
-- `Public/pages/user.html` — Public Profile HTML template
-- `Public/js/login.js`, `Public/js/dashboard.js`, `Public/js/user.js`, `Public/js/user.jsx` — Reference JavaScript/JSX client interaction logic.
 
 ---
 
