@@ -113,10 +113,16 @@ export async function add_friend(req, res) {
       });
     }
 
-    // Add friend only if not already added
+    // Add friend to user's friend list if not already present
     if (!user.friends.includes(normalizedFriendUsername)) {
       user.friends.push(normalizedFriendUsername);
       await user.save();
+    }
+
+    // Also add user to friend's friend list (mutual connection)
+    if (!friend.friends.includes(normalizedUsername)) {
+      friend.friends.push(normalizedUsername);
+      await friend.save();
     }
 
     // Return updated profile

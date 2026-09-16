@@ -2,17 +2,18 @@
 
 This document provides a comprehensive breakdown of the **Online Connections** backend architecture, database schemas, authentication flow, complete API specifications, error handling, CORS headers, and essential guidelines for building the frontend application using **Next.js**.
 
-> 📄 **OpenAPI Specification File:** [docs/openapi.json](file:///C:/Users/kumar/OneDrive/Desktop/Online-Connections/docs/openapi.json) (Import into Postman, Insomnia, or Swagger UI).
+> 📄 **OpenAPI Specification File:** [openapi.json](file:///C:/Users/kumar/OneDrive/Desktop/Online-Connections/openapi.json) (Import into Postman, Insomnia, or Swagger UI).
 
 ---
 
 ## 📌 Table of Contents
 
-1. [Architecture Overview](#1-architecture-overview)
-2. [Environment Configuration](#2-environment-configuration)
-3. [Database Schema (User Model)](#3-database-schema-user-model)
-4. [Authentication & Authorization Flow](#4-authentication--authorization-flow)
-5. [Complete API Reference](#5-complete-api-reference)
+1. [Backend Structure Status & Roadmap (HAVE vs. WANT)](#1-backend-structure-status--roadmap-have-vs-want)
+2. [Architecture Overview](#2-architecture-overview)
+3. [Environment Configuration](#3-environment-configuration)
+4. [Database Schema (User Model)](#4-database-schema-user-model)
+5. [Authentication & Authorization Flow](#5-authentication--authorization-flow)
+6. [Complete API Reference](#6-complete-api-reference)
    - [0. Server Health Check](#0-server-health-check)
    - [1. User Registration](#1-user-registration)
    - [2. User Login](#2-user-login)
@@ -22,17 +23,76 @@ This document provides a comprehensive breakdown of the **Online Connections** b
    - [6. Update User Profile](#6-update-user-profile)
    - [7. Search Users](#7-search-users)
    - [8. Add Friend](#8-add-friend)
-6. [🚀 Next.js Frontend Integration Guide](#6--nextjs-frontend-integration-guide)
+7. [🚀 Next.js Frontend Integration Guide](#7--nextjs-frontend-integration-guide)
    - [A. CORS & Credentials Support](#a-cors--credentials-support)
    - [B. Next.js API Proxy Rewrites](#b-nextjs-api-proxy-rewrites)
    - [C. Authentication & Token Handling in Next.js](#c-authentication--token-handling-in-nextjs)
    - [D. API Utility Client (Axios / Fetch Setup)](#d-api-utility-client-axios--fetch-setup)
    - [E. Recommended Next.js App Router Structure](#e-recommended-nextjs-app-router-structure)
-7. [Frontend Input Validation Rules](#7-frontend-input-validation-rules)
+8. [Frontend Input Validation Rules](#8-frontend-input-validation-rules)
 
 ---
 
-## 1. Architecture Overview
+## 1. Backend Structure Status & Roadmap (HAVE vs. WANT)
+
+### 📦 HAVE (Current Implementation - Sorted by Priority)
+
+1. **P0 - Core REST API Server & Server Health Check**
+   - Express 5.x server setup with ES Modules (`type: module`).
+   - MongoDB database connection layer using Mongoose 9.x (`src/config/database.js`).
+   - Environment configuration management (`src/config/config.js` and `.env`).
+   - `GET /` - Server Health Check endpoint.
+
+2. **P0 - Authentication & Session Routes**
+   - `POST /api/auth/register` - User Registration (with username/email uniqueness check).
+   - `POST /api/auth/login` - User Login (authenticates via email or username, issues JWT access token + refresh cookie).
+   - `POST /api/auth/logout` - User Logout (clears `refreshToken` HTTP-Only cookie).
+
+3. **P0 - User Profile Management Routes**
+   - `GET /api/auth/get-me` - Get Logged-in User Profile (Private, JWT required).
+   - `GET /api/auth/profile/:username` - Get Public User Profile (Public).
+   - `PATCH /api/auth/profile/:username` - Update User Profile (Private, user can only update their own profile).
+
+4. **P1 - Social Connection & Search Routes**
+   - `GET /api/auth/users/search` - Search Users by username query (with regex escaping).
+   - `POST /api/auth/friends/:username/:friendUsername` - Add Friend (prevents duplicate or self-friendship).
+
+5. **P1 - Security & CORS Setup**
+   - Dual JWT token generation (15m access token in payload, 7d refresh token in HTTP-only cookie).
+   - Custom CORS header middleware allowing trusted origins (`localhost:3000`, `localhost:3001`, `localhost:5173`) with credentials support.
+
+6. **P2 - Initial Testing & Documentation**
+   - Basic automated unit test suite (`tests/auth.test.js`) using Node's native test runner.
+   - Complete OpenAPI 3.0 specification file (`openapi.json`).
+
+---
+
+### 🎯 WANT (Missing Features & Improvements - Sorted by Priority)
+
+1. **P0 - Token Refresh Endpoint (`POST /api/auth/refresh`)**
+   - **Reason:** Currently, refresh tokens are generated and set in cookies, but there is no endpoint to exchange a valid refresh token for a new access token once the 15-minute access token expires.
+
+2. **P0 - Centralized Authentication Middleware (`src/middleware/auth.middleware.js`)**
+   - **Reason:** Token parsing and verification logic (`getTokenPayload`) is duplicated across multiple controllers instead of being handled by a modular Express middleware.
+
+3. **P0 - Secure Password Hashing (Bcrypt / Scrypt with Salt)**
+   - **Reason:** Current implementation uses unsalted SHA-256 (`crypto.createHash('sha256')`), which is susceptible to precomputed rainbow table attacks.
+
+4. **P1 - Centralized Error Handling Middleware**
+   - **Reason:** Missing global Express error handling middleware to gracefully format unexpected runtime errors and database exceptions into standardized JSON responses.
+
+5. **P1 - Comprehensive Input Validation Schemas (Zod / Joi)**
+   - **Reason:** Request body validation relies on manual `typeof` checks instead of strict schema validation for email format, password complexity, and string sanitization.
+
+6. **P2 - Expanded Automated Test Suite**
+   - **Reason:** Unit tests are missing for update profile (`PATCH`), friend addition (`POST`), logout cookie clearing, and token expiration scenarios.
+
+7. **P2 - Utilities & Helper Modules (`src/utils/`)**
+   - **Reason:** The `src/utils` directory is currently empty and needs reusable helpers (e.g., token utilities, response formatters, async handlers).
+
+---
+
+## 2. Architecture Overview
 
 - **Role:** Pure RESTful API Server (Sends and receives JSON data only).
 - **Runtime Environment:** Node.js (ES Module format `"type": "module"`).
