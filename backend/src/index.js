@@ -1,10 +1,6 @@
 import app from "./app.js";
 import config from "./config/config.js";
 import connectDB from "./config/database.js";
-import dotenv from "dotenv";
-
-dotenv.config();
-export const PORT = process.env.PORT || 5000;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,17 +16,6 @@ app.get("/", (_req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| Start Server (Local vs Vercel Serverless)
-|--------------------------------------------------------------------------
-*/
-connectDB().catch((err) => console.error("Database connection error:", err));
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-/*
-|--------------------------------------------------------------------------
 | 404 Handler (Keep this LAST)
 |--------------------------------------------------------------------------
 */
@@ -41,4 +26,22 @@ app.use((_req, res) => {
   });
 });
 
-export default app;
+/*
+|--------------------------------------------------------------------------
+| Start Server
+|--------------------------------------------------------------------------
+*/
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(config.PORT, () => {
+      console.log(`Server running on http://localhost:${config.PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();

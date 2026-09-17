@@ -1,13 +1,4 @@
-const getApiBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!envUrl) return "/api/auth";
-  // Remove trailing slash if provided in env var
-  const trimmed = envUrl.replace(/\/+$/, "");
-  // If user provided base server domain without /api/auth path
-  return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/auth";
 
 export interface FriendDetail {
   id: string;
@@ -64,25 +55,10 @@ export async function apiRequest<T = any>(
     credentials: "include",
   });
 
-  let data: any;
-  const contentType = response.headers.get("content-type") || "";
+  const data = await response.json();
 
-  if (contentType.includes("application/json")) {
-    try {
-      data = await response.json();
-    } catch (e) {
-      throw new Error("Invalid response format from server.");
-    }
-  } else {
-    const text = await response.text();
-    console.error("Non-JSON API Response received:", text);
-    throw new Error(
-      `API Server error (${response.status}). Please verify NEXT_PUBLIC_API_URL environment variable is set to the backend service.`
-    );
-  }
-
-  if (!response.ok && !data?.success) {
-    throw new Error(data?.message || `Request failed with status ${response.status}`);
+  if (!response.ok && !data.success) {
+    throw new Error(data.message || `Request failed with status ${response.status}`);
   }
 
   return data as T;
