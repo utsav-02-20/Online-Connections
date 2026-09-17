@@ -28,20 +28,15 @@ app.use((_req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| Start Server
+| Start Server (Local vs Vercel Serverless)
 |--------------------------------------------------------------------------
 */
-const startServer = async () => {
-  try {
-    await connectDB();
+connectDB().catch((err) => console.error("Database connection error:", err));
 
-    app.listen(config.PORT, () => {
-      console.log(`Server running on http://localhost:${config.PORT}`);
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error.message);
-    process.exit(1);
-  }
-};
+if (process.env.NODE_ENV !== "production") {
+  app.listen(config.PORT, () => {
+    console.log(`Server running on http://localhost:${config.PORT}`);
+  });
+}
 
-startServer();
+export default app;
