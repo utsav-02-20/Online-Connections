@@ -1,4 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/auth";
+const getApiBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) return "/api/auth";
+  // Remove trailing slash if provided in env var
+  const trimmed = envUrl.replace(/\/+$/, "");
+  // If user provided base server domain without /api/auth path
+  return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface FriendDetail {
   id: string;
