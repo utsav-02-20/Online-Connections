@@ -33,10 +33,13 @@ app.use((_req, res) => {
 */
 connectDB().catch((err) => console.error("Database connection error:", err));
 
-if (process.env.NODE_ENV !== "production") {
-  app.listen(config.PORT, () => {
-    console.log(`Server running on http://localhost:${config.PORT}`);
-  });
-}
+// if (process.env.NODE_ENV !== "production") {
+//   app.listen(config.PORT, () => {
+//     console.log(`Server running on http://localhost:${config.PORT}`);
+//   });
+// }
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 export default app;
