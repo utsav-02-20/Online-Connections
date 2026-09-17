@@ -8,12 +8,18 @@ const app = express();
 
 // CORS Middleware for Next.js frontend
 app.use((req, res, next) => {
-  const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"];
+  const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5173",
+    process.env.CLIENT_URL,
+  ].filter(Boolean);
+
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  if (origin && (allowedOrigins.includes(origin) || origin.endsWith(".vercel.app"))) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   } else {
-    res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
   }
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
