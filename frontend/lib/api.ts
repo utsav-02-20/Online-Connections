@@ -55,10 +55,25 @@ export async function apiRequest<T = any>(
     credentials: "include",
   });
 
-  const data = await response.json();
+  let data: any;
+  const contentType = response.headers.get("content-type") || "";
 
-  if (!response.ok && !data.success) {
-    throw new Error(data.message || `Request failed with status ${response.status}`);
+  if (contentType.includes("application/json")) {
+    try {
+      data = await response.json();
+    } catch (e) {
+      throw new Error("Invalid response format from server.");
+    }
+  } else {
+    const text = await response.text();
+    console.error("Non-JSON API Response received:", text);
+    throw new Error(
+      `API Server error (${response.status}). Please verify NEXT_PUBLIC_API_URL environment variable is set to the backend service.`
+    );
+  }
+
+  if (!response.ok && !data?.success) {
+    throw new Error(data?.message || `Request failed with status ${response.status}`);
   }
 
   return data as T;
