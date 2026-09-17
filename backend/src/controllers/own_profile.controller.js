@@ -6,11 +6,6 @@ import config from "../config/config.js";
 |--------------------------------------------------------------------------
 | Helper Function: Extract & Verify JWT Token
 |--------------------------------------------------------------------------
-| - Reads Bearer token from Authorization header.
-| - Verifies JWT using JWT_SECRET.
-| - Returns decoded payload containing user ID.
-| - Throws an error if token is missing or invalid.
-|--------------------------------------------------------------------------
 */
 function getTokenPayload(req) {
     const authHeader = req.headers.authorization;
@@ -25,23 +20,32 @@ function getTokenPayload(req) {
 
 /*
 |--------------------------------------------------------------------------
-| Helper Function: Build Safe User Response
-|--------------------------------------------------------------------------
-| - Removes sensitive fields before sending data to client.
-| - Returns only the required user information.
+| Helper Function: Build Safe User Response with Populated Friend Details
 |--------------------------------------------------------------------------
 */
-function buildUserResponse(user) {
+async function buildUserResponse(user) {
+    const friendList = Array.isArray(user.friends) ? user.friends : [];
+    let friendsDetails = [];
+    if (friendList.length > 0) {
+        const friendDocs = await userModel.find({ username: { $in: friendList } }).select("username profilePic about");
+        friendsDetails = friendDocs.map((f) => ({
+            id: f._id,
+            username: f.username,
+            profilePic: f.profilePic || "",
+            about: f.about || "",
+        }));
+    }
+
     return {
         id: user._id,
         username: user.username,
         email: user.email,
         phone: user.phone || "",
-        phoneVerified: Boolean(user.phoneVerified),
         address: user.address || "",
         profilePic: user.profilePic || "",
         about: user.about || "",
-        friends: Array.isArray(user.friends) ? user.friends : [],
+        friends: friendList,
+        friendsDetails,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     };
@@ -50,11 +54,6 @@ function buildUserResponse(user) {
 /*
 |--------------------------------------------------------------------------
 | Controller: Get Logged-in User Profile
-|--------------------------------------------------------------------------
-| Route  : GET /api/user/me
-| Access : Private (JWT Required)
-|
-| Returns the authenticated user's profile without password.
 |--------------------------------------------------------------------------
 */
 export async function get_me(req, res) {
@@ -69,9 +68,11 @@ export async function get_me(req, res) {
             });
         }
 
+        const userResponse = await buildUserResponse(user);
+
         return res.status(200).json({
             success: true,
-            user: buildUserResponse(user),
+            user: userResponse,
         });
     } catch (error) {
         if (
@@ -90,7 +91,7 @@ export async function get_me(req, res) {
             message: "Internal server error",
         });
     }
-}; 
+}
 
 export default {
     get_me,

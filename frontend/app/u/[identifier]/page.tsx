@@ -16,9 +16,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
 
-  const { user, token, addFriend } = useAuth();
+  const { user, token, addFriend, removeFriend } = useAuth();
 
   useEffect(() => {
     fetchProfile();
@@ -59,6 +59,18 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
       await fetchProfile();
     } catch (err: any) {
       setToastMessage({ text: err.message || "Could not add friend", type: "error" });
+    }
+  };
+
+  const handleRemoveFriend = async (targetUsername?: string) => {
+    const friendToUnfriend = targetUsername || profile?.username;
+    if (!friendToUnfriend) return;
+    try {
+      await removeFriend(friendToUnfriend);
+      setToastMessage({ text: `Removed @${friendToUnfriend} from your friends.`, type: "info" });
+      await fetchProfile();
+    } catch (err: any) {
+      setToastMessage({ text: err.message || "Could not unfriend user", type: "error" });
     }
   };
 
@@ -135,15 +147,25 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
                 </Link>
               ) : (
                 user && (
-                  <Button
-                    variant={isAlreadyFriend ? "secondary" : "primary"}
-                    size="md"
-                    disabled={isAlreadyFriend}
-                    onClick={handleAddFriend}
-                    className="shadow-sm"
-                  >
-                    {isAlreadyFriend ? "✓ Friends" : "+ Add Friend"}
-                  </Button>
+                  isAlreadyFriend ? (
+                    <Button
+                      variant="danger"
+                      size="md"
+                      onClick={() => handleRemoveFriend()}
+                      className="shadow-sm"
+                    >
+                      ✕ Unfriend
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={handleAddFriend}
+                      className="shadow-sm"
+                    >
+                      + Add Friend
+                    </Button>
+                  )
                 )
               )}
             </div>
@@ -156,7 +178,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
                 @{profile.username}
               </h1>
               {isSelf && <Badge variant="info">Owner</Badge>}
-              {profile.phoneVerified && <Badge variant="success">✓ Verified</Badge>}
             </div>
 
             {isSelf && profile.email && (
@@ -225,17 +246,36 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
         {!profile.friends || profile.friends.length === 0 ? (
           <p className="text-slate-400 text-sm py-2">No friends added yet.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {profile.friends.map((friendName) => (
-              <Link key={friendName} href={`/profile/${friendName}`}>
-                <div className="bg-slate-50 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-300 px-3.5 py-2 rounded-xl flex items-center gap-2 transition-all">
-                  <Avatar username={friendName} size="sm" />
-                  <span className="text-xs font-bold text-slate-800 hover:text-blue-600">
-                    @{friendName}
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div className="flex flex-wrap gap-2.5">
+            {profile.friends.map((friendName) => {
+              const friendDetail = profile.friendsDetails?.find(
+                (f) => f.username.toLowerCase() === friendName.toLowerCase()
+              );
+
+              return (
+                <div
+                  key={friendName}
+                  className="bg-slate-50 border border-slate-200/80 pl-3 pr-2 py-1.5 rounded-xl flex items-center gap-2 group hover:border-blue-300 transition-all"
+                >
+                  <Link href={`/profile/${friendName}`} className="flex items-center gap-2">
+                    <Avatar src={friendDetail?.profilePic} username={friendName} size="sm" />
+                    <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600">
+                      @{friendName}
+                    </span>
+                  </Link>
+
+                {isSelf && (
+                  <button
+                    onClick={() => handleRemoveFriend(friendName)}
+                    title={`Unfriend @${friendName}`}
+                    className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition-colors text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
           </div>
         )}
       </Card>

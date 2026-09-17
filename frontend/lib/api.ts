@@ -1,5 +1,12 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/auth";
 
+export interface FriendDetail {
+  id: string;
+  username: string;
+  profilePic?: string;
+  about?: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -10,6 +17,7 @@ export interface User {
   profilePic?: string;
   about?: string;
   friends?: string[];
+  friendsDetails?: FriendDetail[];
   createdAt?: string;
   updatedAt?: string;
 }

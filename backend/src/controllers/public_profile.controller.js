@@ -2,21 +2,6 @@ import userModel from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import config from "../config/config.js";
 
-/*
-|--------------------------------------------------------------------------
-| Controller: Get Public User Profile
-|--------------------------------------------------------------------------
-| Route  : GET /api/auth/profile/:username
-| Access : Public (Optional Authorization Header for isFriend & mutualFriends)
-|
-| Description:
-| - Fetches public profile of a user by username.
-| - Excludes private data (email, full friends array).
-| - Returns safe social metrics: friendsCount, isFriend, mutualFriends, createdAt.
-|--------------------------------------------------------------------------
-*/
-
-// Helper: Extract optional JWT token if provided
 function getOptionalTokenPayload(req) {
   try {
     const authHeader = req.headers.authorization;
@@ -25,7 +10,7 @@ function getOptionalTokenPayload(req) {
       return jwt.verify(token, config.JWT_SECRET);
     }
   } catch (error) {
-    // Unauthenticated request, return null
+    // Unauthenticated request
   }
   return null;
 }
@@ -47,10 +32,20 @@ export async function get_public_profile(req, res) {
     const targetFriends = Array.isArray(user.friends) ? user.friends : [];
     const friendsCount = targetFriends.length;
 
+    let friendsDetails = [];
+    if (targetFriends.length > 0) {
+      const friendDocs = await userModel.find({ username: { $in: targetFriends } }).select("username profilePic about");
+      friendsDetails = friendDocs.map((f) => ({
+        id: f._id,
+        username: f.username,
+        profilePic: f.profilePic || "",
+        about: f.about || "",
+      }));
+    }
+
     let isFriend = false;
     let mutualFriends = 0;
 
-    // Optional social graph context for logged-in viewer
     const decoded = getOptionalTokenPayload(req);
     if (decoded && decoded.id) {
       const loggedInUser = await userModel.findById(decoded.id);
@@ -60,10 +55,8 @@ export async function get_public_profile(req, res) {
           ? loggedInUser.friends
           : [];
 
-        // Check if logged-in user is friends with target user
         isFriend = targetFriends.includes(loggedInUsername);
 
-        // Calculate count of mutual friends
         mutualFriends = loggedInFriends.filter((f) =>
           targetFriends.includes(f)
         ).length;
@@ -77,6 +70,8 @@ export async function get_public_profile(req, res) {
         username: user.username,
         profilePic: user.profilePic || "",
         about: user.about || "",
+        friends: targetFriends,
+        friendsDetails,
         createdAt: user.createdAt,
         friendsCount,
         isFriend,

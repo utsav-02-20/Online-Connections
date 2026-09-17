@@ -6,10 +6,6 @@ import config from "../config/config.js";
 |--------------------------------------------------------------------------
 | Helper Function: Extract & Verify JWT Token
 |--------------------------------------------------------------------------
-| - Reads Bearer token from Authorization header.
-| - Verifies JWT using JWT_SECRET.
-| - Returns decoded payload containing logged-in user ID.
-|--------------------------------------------------------------------------
 */
 function getTokenPayload(req) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -23,22 +19,32 @@ function getTokenPayload(req) {
 
 /*
 |--------------------------------------------------------------------------
-| Helper Function: Build Safe User Response
-|--------------------------------------------------------------------------
-| - Returns only non-sensitive user information.
+| Helper Function: Build Safe User Response with Populated Friend Details
 |--------------------------------------------------------------------------
 */
-function buildUserResponse(user) {
+async function buildUserResponse(user) {
+  const friendList = Array.isArray(user.friends) ? user.friends : [];
+  let friendsDetails = [];
+  if (friendList.length > 0) {
+    const friendDocs = await userModel.find({ username: { $in: friendList } }).select("username profilePic about");
+    friendsDetails = friendDocs.map((f) => ({
+      id: f._id,
+      username: f.username,
+      profilePic: f.profilePic || "",
+      about: f.about || "",
+    }));
+  }
+
   return {
     id: user._id,
     username: user.username,
     email: user.email,
     phone: user.phone || "",
-    phoneVerified: Boolean(user.phoneVerified),
     address: user.address || "",
     profilePic: user.profilePic || "",
     about: user.about || "",
-    friends: Array.isArray(user.friends) ? user.friends : [],
+    friends: friendList,
+    friendsDetails,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -48,23 +54,10 @@ function buildUserResponse(user) {
 |--------------------------------------------------------------------------
 | Controller: Add Friend
 |--------------------------------------------------------------------------
-| Route  : POST /api/user/:username/friends/:friendUsername
-| Access : Private (JWT Required)
-|
-| Description:
-| - Authenticates the logged-in user.
-| - Allows a user to add another user as a friend.
-| - Prevents adding yourself.
-| - Prevents duplicate friends.
-| - Returns the updated user profile.
-|--------------------------------------------------------------------------
 */
 export async function add_friend(req, res) {
   try {
-    // Verify JWT and get logged-in user ID
     const decoded = getTokenPayload(req);
-
-    // Get usernames from URL
     const { username, friendUsername } = req.params;
 
     const normalizedUsername = String(username || "").trim().toLowerCase();
@@ -72,7 +65,6 @@ export async function add_friend(req, res) {
       .trim()
       .toLowerCase();
 
-    // Find authenticated user
     const user = await userModel.findById(decoded.id);
 
     if (!user) {
@@ -82,7 +74,6 @@ export async function add_friend(req, res) {
       });
     }
 
-    // Ensure user is modifying only their own account
     if (user.username !== normalizedUsername) {
       return res.status(403).json({
         success: false,
@@ -90,7 +81,6 @@ export async function add_friend(req, res) {
       });
     }
 
-    // Prevent invalid or self friendship
     if (
       !normalizedFriendUsername ||
       normalizedFriendUsername === normalizedUsername
@@ -101,7 +91,6 @@ export async function add_friend(req, res) {
       });
     }
 
-    // Find friend account
     const friend = await userModel.findOne({
       username: normalizedFriendUsername,
     });
@@ -113,27 +102,25 @@ export async function add_friend(req, res) {
       });
     }
 
-    // Add friend to user's friend list if not already present
     if (!user.friends.includes(normalizedFriendUsername)) {
       user.friends.push(normalizedFriendUsername);
       await user.save();
     }
 
-    // Also add user to friend's friend list (mutual connection)
     if (!friend.friends.includes(normalizedUsername)) {
       friend.friends.push(normalizedUsername);
       await friend.save();
     }
 
-    // Return updated profile
+    const userResponse = await buildUserResponse(user);
+
     return res.status(200).json({
       success: true,
       message: "Friend added successfully",
-      user: buildUserResponse(user),
+      user: userResponse,
     });
 
   } catch (error) {
-    // Handle authentication errors
     if (
       error.message === "Token missing" ||
       error.name === "JsonWebTokenError" ||
@@ -145,14 +132,84 @@ export async function add_friend(req, res) {
       });
     }
 
-    // Handle unexpected server errors
     return res.status(500).json({
       success: false,
       message: "Internal server error",
     });
   }
-}; 
+}
+
+/*
+|--------------------------------------------------------------------------
+| Controller: Remove Friend (Unfriend)
+|--------------------------------------------------------------------------
+*/
+export async function remove_friend(req, res) {
+  try {
+    const decoded = getTokenPayload(req);
+    const { username, friendUsername } = req.params;
+
+    const normalizedUsername = String(username || "").trim().toLowerCase();
+    const normalizedFriendUsername = String(friendUsername || "")
+      .trim()
+      .toLowerCase();
+
+    const user = await userModel.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.username !== normalizedUsername) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only modify your own account",
+      });
+    }
+
+    const friend = await userModel.findOne({
+      username: normalizedFriendUsername,
+    });
+
+    user.friends = user.friends.filter((f) => f !== normalizedFriendUsername);
+    await user.save();
+
+    if (friend) {
+      friend.friends = friend.friends.filter((f) => f !== normalizedUsername);
+      await friend.save();
+    }
+
+    const userResponse = await buildUserResponse(user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Friend removed successfully",
+      user: userResponse,
+    });
+
+  } catch (error) {
+    if (
+      error.message === "Token missing" ||
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
 
 export default {
   add_friend,
+  remove_friend,
 };

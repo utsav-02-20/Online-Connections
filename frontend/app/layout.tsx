@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs font-medium text-slate-500">
-            &copy; {new Date().getFullYear()} Online Connections. Built for developers and social networks.
+            &copy; {new Date().getFullYear()} Online Connections. All rights reserved.
           </footer>
         </AuthProvider>
       </body>

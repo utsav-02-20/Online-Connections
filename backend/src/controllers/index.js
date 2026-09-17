@@ -5,7 +5,7 @@ import { get_me } from "./own_profile.controller.js";
 import { get_public_profile } from "./public_profile.controller.js";
 import { update_profile } from "./update_profile.controller.js";
 import { search_users } from "./search_users.controller.js";
-import { add_friend } from "./add_friend.controller.js";
+import { add_friend, remove_friend } from "./add_friend.controller.js";
 
 export {
   register,
@@ -16,4 +16,5 @@ export {
   update_profile,
   search_users,
   add_friend,
+  remove_friend,
 };

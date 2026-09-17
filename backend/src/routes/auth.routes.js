@@ -11,5 +11,6 @@ authRouter.get("/profile/:username", authController.get_public_profile);
 authRouter.patch("/profile/:username", authController.update_profile);
 authRouter.get("/users/search", authController.search_users);
 authRouter.post("/friends/:username/:friendUsername", authController.add_friend);
+authRouter.delete("/friends/:username/:friendUsername", authController.remove_friend);
 
 export default authRouter;

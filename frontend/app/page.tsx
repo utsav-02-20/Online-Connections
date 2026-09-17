@@ -38,9 +38,17 @@ export default function Home() {
                 <span>✨</span> Welcome to Online Connections
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-                Hello, @{user.username}!
-              </h1>
+              <div className="flex flex-wrap items-center gap-4">
+                <Avatar
+                  src={user.profilePic}
+                  username={user.username}
+                  size="lg"
+                  className="ring-4 ring-white/30 shadow-xl shrink-0"
+                />
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+                  Hello, @{user.username}!
+                </h1>
+              </div>
 
               <p className="text-blue-100 text-sm sm:text-base leading-relaxed">
                 Connect with members across the platform, manage your public bio, and build your social graph seamlessly.
@@ -70,8 +78,11 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card hoverEffect className="space-y-1">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Account Tag</span>
-              <p className="text-lg font-extrabold text-slate-900 truncate">@{user.username}</p>
-              <p className="text-xs text-slate-500">Active Profile</p>
+              <div className="flex items-center gap-2.5 pt-1">
+                <Avatar src={user.profilePic} username={user.username} size="sm" />
+                <p className="text-lg font-extrabold text-slate-900 truncate">@{user.username}</p>
+              </div>
+              <p className="text-xs text-slate-500 pt-1">Active Profile</p>
             </Card>
 
             <Card hoverEffect className="space-y-1">
@@ -84,16 +95,14 @@ export default function Home() {
             </Card>
 
             <Card hoverEffect className="space-y-1">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Phone Verification</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Member Since</span>
               <div className="flex items-center justify-between">
                 <p className="text-base font-bold text-slate-900">
-                  {user.phoneVerified ? "Verified" : "Unverified"}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Active"}
                 </p>
-                <Badge variant={user.phoneVerified ? "success" : "warning"}>
-                  {user.phoneVerified ? "✓ Verified" : "Pending"}
-                </Badge>
+                <Badge variant="success">✓ Active</Badge>
               </div>
-              <p className="text-xs text-slate-500">Security Status</p>
+              <p className="text-xs text-slate-500">Account History</p>
             </Card>
 
             <Card hoverEffect className="space-y-1">
@@ -139,20 +148,32 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {user.friends.map((friendName) => (
-                  <Link key={friendName} href={`/profile/${friendName}`}>
-                    <div className="p-3.5 rounded-xl border border-slate-200/70 hover:border-blue-400 hover:shadow-xs transition-all flex items-center gap-3 bg-slate-50/50 hover:bg-white group">
-                      <Avatar username={friendName} size="md" />
-                      <div className="flex-1 min-w-0">
-                        <span className="font-bold text-slate-900 text-sm block truncate group-hover:text-blue-600 transition-colors">
-                          @{friendName}
-                        </span>
-                        <span className="text-xs text-slate-400 block">Connected</span>
+                {user.friends.map((friendName) => {
+                  const friendDetail = user.friendsDetails?.find(
+                    (f) => f.username.toLowerCase() === friendName.toLowerCase()
+                  );
+
+                  return (
+                    <Link key={friendName} href={`/profile/${friendName}`}>
+                      <div className="p-3.5 rounded-xl border border-slate-200/70 hover:border-blue-400 hover:shadow-xs transition-all flex items-center gap-3 bg-slate-50/50 hover:bg-white group">
+                        <Avatar
+                          src={friendDetail?.profilePic}
+                          username={friendName}
+                          size="md"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-slate-900 text-sm block truncate group-hover:text-blue-600 transition-colors">
+                            @{friendName}
+                          </span>
+                          <span className="text-xs text-slate-400 block truncate">
+                            {friendDetail?.about || "Connected Member"}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-400 group-hover:translate-x-0.5 transition-transform">→</span>
                       </div>
-                      <span className="text-xs text-slate-400 group-hover:translate-x-0.5 transition-transform">→</span>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </Card>

@@ -15,7 +15,6 @@ export default function EditProfilePage() {
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
   const [address, setAddress] = useState("");
   const [profilePic, setProfilePic] = useState("");
   const [about, setAbout] = useState("");
@@ -32,7 +31,6 @@ export default function EditProfilePage() {
     if (user) {
       setEmail(user.email || "");
       setPhone(user.phone || "");
-      setPhoneVerified(Boolean(user.phoneVerified));
       setAddress(user.address || "");
       setProfilePic(user.profilePic || "");
       setAbout(user.about || "");
@@ -152,7 +150,6 @@ export default function EditProfilePage() {
       await updateProfile({
         email,
         phone,
-        phoneVerified,
         address,
         profilePic,
         about,
@@ -317,26 +314,12 @@ export default function EditProfilePage() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <Input
-              label="Phone Number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 555-0199"
-            />
-
-            <div className="pb-3">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={phoneVerified}
-                  onChange={(e) => setPhoneVerified(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                />
-                Mark Phone as Verified
-              </label>
-            </div>
-          </div>
+          <Input
+            label="Phone Number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+1 555-0199"
+          />
 
           <Input
             label="Address / Location"

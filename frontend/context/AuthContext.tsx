@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   addFriend: (friendUsername: string) => Promise<void>;
+  removeFriend: (friendUsername: string) => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
 
@@ -131,6 +132,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const removeFriend = async (friendUsername: string) => {
+    if (!user || !token) throw new Error("Not authenticated");
+
+    const res = await apiRequest<AuthResponse>(
+      `/friends/${user.username}/${friendUsername}`,
+      { method: "DELETE" },
+      token
+    );
+
+    if (res.success && res.user) {
+      setUser(res.user);
+    } else {
+      throw new Error(res.message || "Remove friend failed");
+    }
+  };
+
   const refreshUserData = async () => {
     if (token) {
       await fetchCurrentUser(token);
@@ -148,6 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         updateProfile,
         addFriend,
+        removeFriend,
         refreshUserData,
       }}
     >
