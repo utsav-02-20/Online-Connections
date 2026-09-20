@@ -158,7 +158,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-2 sm:pt-0">
+            <div className="pt-2 sm:pt-0 flex items-center gap-2">
+              {!isSelf && user && (
+                <Link href={`/messages?user=${profile.username}`}>
+                  <Button variant="outline" size="md" className="shadow-xs font-bold text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100">
+                    💬 Message
+                  </Button>
+                </Link>
+              )}
               {isSelf ? (
                 <Link href="/profile/edit">
                   <Button variant="outline" size="md">

@@ -31,6 +31,18 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
+          {user && (
+            <Link
+              href="/messages"
+              className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-bold transition-colors bg-blue-50 hover:bg-blue-100/80 px-3 py-1.5 rounded-xl border border-blue-200/60"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>Messages</span>
+            </Link>
+          )}
+
           <Link
             href="/"
             className="text-slate-600 hover:text-slate-900 transition-colors"
@@ -144,6 +156,15 @@ export default function Navbar() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-3 animate-fade-in shadow-lg">
+          {user && (
+            <Link
+              href="/messages"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-blue-600 bg-blue-50"
+            >
+              💬 Messages
+            </Link>
+          )}
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
