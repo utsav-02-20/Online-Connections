@@ -55,19 +55,19 @@ export default function Home() {
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">
+                <Link href="/messages">
+                  <Button variant="secondary" size="md" className="bg-white text-blue-700 hover:bg-blue-50 shadow-md font-bold">
+                    💬 Open Messages
+                  </Button>
+                </Link>
                 <Link href="/search">
-                  <Button variant="secondary" size="md" className="bg-white text-blue-700 hover:bg-blue-50 shadow-md">
+                  <Button variant="ghost" size="md" className="text-white hover:bg-white/15 border border-white/20">
                     🔍 Discover Users
                   </Button>
                 </Link>
                 <Link href={`/u/${user.username}`}>
                   <Button variant="ghost" size="md" className="text-white hover:bg-white/15 border border-white/20">
                     👤 View My Profile
-                  </Button>
-                </Link>
-                <Link href="/profile/edit">
-                  <Button variant="ghost" size="md" className="text-white hover:bg-white/15 border border-white/20">
-                    ⚙️ Settings
                   </Button>
                 </Link>
               </div>

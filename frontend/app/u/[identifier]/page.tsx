@@ -119,10 +119,30 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
 
       {/* Profile Header & Banner Card */}
       <div className="bg-white border border-slate-200/80 rounded-3xl shadow-lg overflow-hidden relative">
-        {/* Cover Banner Gradient */}
-        <div className="h-40 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 relative">
-          <div className="absolute inset-0 bg-black/10"></div>
-        </div>
+        {/* Cover Banner (Gradient or Image) */}
+        {(() => {
+          const savedBanner = typeof window !== "undefined" ? localStorage.getItem(`cover_banner_${profile.username}`) : null;
+          const isCustomImage = savedBanner && (savedBanner.startsWith("http://") || savedBanner.startsWith("https://") || savedBanner.startsWith("data:image/"));
+          
+          if (isCustomImage) {
+            return (
+              <div className="h-44 relative bg-slate-900 overflow-hidden">
+                <img src={savedBanner} alt="Cover banner" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/20"></div>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              className={`h-40 relative transition-all duration-300 ${
+                savedBanner || "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700"
+              }`}
+            >
+              <div className="absolute inset-0 bg-black/10"></div>
+            </div>
+          );
+        })()}
 
         {/* Profile Content Overlay */}
         <div className="px-8 pb-8 pt-0 relative">
@@ -138,7 +158,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ identifi
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-2 sm:pt-0">
+            <div className="pt-2 sm:pt-0 flex items-center gap-2">
+              {!isSelf && user && (
+                <Link href={`/messages?user=${profile.username}`}>
+                  <Button variant="outline" size="md" className="shadow-xs font-bold text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100">
+                    💬 Message
+                  </Button>
+                </Link>
+              )}
               {isSelf ? (
                 <Link href="/profile/edit">
                   <Button variant="outline" size="md">

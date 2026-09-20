@@ -17,15 +17,25 @@ export default function EditProfilePage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [profilePic, setProfilePic] = useState("");
+  const [coverBanner, setCoverBanner] = useState("");
   const [about, setAbout] = useState("");
 
   const [picSourceMode, setPicSourceMode] = useState<"upload" | "camera" | "url">("upload");
+  const [bannerMode, setBannerMode] = useState<"preset" | "upload" | "url">("preset");
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const BANNER_PRESETS = [
+    { id: "blue-indigo", name: "Oceanic Gradient", class: "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700" },
+    { id: "emerald-teal", name: "Emerald Forest", class: "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700" },
+    { id: "purple-pink", name: "Sunset Cyberpunk", class: "bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600" },
+    { id: "amber-orange", name: "Warm Sunburst", class: "bg-gradient-to-r from-amber-500 via-orange-600 to-red-600" },
+    { id: "slate-dark", name: "Midnight Onyx", class: "bg-gradient-to-r from-slate-800 via-slate-900 to-zinc-900" },
+  ];
 
   useEffect(() => {
     if (user) {
@@ -34,6 +44,11 @@ export default function EditProfilePage() {
       setAddress(user.address || "");
       setProfilePic(user.profilePic || "");
       setAbout(user.about || "");
+
+      const savedBanner = localStorage.getItem(`cover_banner_${user.username}`);
+      if (savedBanner) {
+        setCoverBanner(savedBanner);
+      }
     }
   }, [user]);
 
@@ -51,20 +66,32 @@ export default function EditProfilePage() {
     setCameraActive(false);
   };
 
+  useEffect(() => {
+    if (cameraActive && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [cameraActive]);
+
   const startCamera = async () => {
     setToastMessage(null);
     try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 400 }, height: { ideal: 400 }, facingMode: "user" },
+        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: "user" },
+        audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
       setCameraActive(true);
     } catch (err: any) {
       console.error("Camera access error:", err);
-      setToastMessage({ text: "Unable to access camera. Check permissions.", type: "error" });
+      setToastMessage({
+        text: err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
+          ? "Camera permission denied by browser. Please allow camera access in browser settings."
+          : "Unable to access camera or no camera device found.",
+        type: "error",
+      });
     }
   };
 
@@ -128,6 +155,44 @@ export default function EditProfilePage() {
     reader.readAsDataURL(file);
   };
 
+  const handleBannerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setToastMessage({ text: "Please select a valid image file.", type: "error" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          setCoverBanner(compressedDataUrl);
+          setToastMessage({ text: "Cover banner image uploaded successfully!", type: "success" });
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (authLoading) {
     return <div className="text-center py-12 text-slate-400">Loading user data...</div>;
   }
@@ -147,6 +212,9 @@ export default function EditProfilePage() {
     stopCamera();
 
     try {
+      if (user) {
+        localStorage.setItem(`cover_banner_${user.username}`, coverBanner);
+      }
       await updateProfile({
         email,
         phone,
@@ -295,6 +363,113 @@ export default function EditProfilePage() {
               placeholder="https://example.com/photo.jpg"
             />
           )}
+
+          {/* Cover Banner Settings Section */}
+          <div className="pt-4 border-t border-slate-100 space-y-3">
+            <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+              Cover Banner Header
+            </h2>
+
+            {/* Current Banner Preview */}
+            <div className="relative h-20 rounded-xl overflow-hidden shadow-xs border border-slate-200">
+              {coverBanner && (coverBanner.startsWith("http://") || coverBanner.startsWith("https://") || coverBanner.startsWith("data:image/")) ? (
+                <img src={coverBanner} alt="Cover Banner" className="w-full h-full object-cover" />
+              ) : (
+                <div className={`w-full h-full ${coverBanner || BANNER_PRESETS[0].class}`}></div>
+              )}
+              {coverBanner && (
+                <button
+                  type="button"
+                  onClick={() => setCoverBanner("")}
+                  className="absolute top-2 right-2 bg-black/50 hover:bg-red-600 text-white p-1 rounded-full text-xs transition-colors"
+                  title="Reset to default banner"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div className="flex rounded-xl bg-slate-100 p-1 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setBannerMode("preset")}
+                className={`flex-1 py-1 rounded-lg transition-all ${
+                  bannerMode === "preset" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                🎨 Gradients
+              </button>
+              <button
+                type="button"
+                onClick={() => setBannerMode("upload")}
+                className={`flex-1 py-1 rounded-lg transition-all ${
+                  bannerMode === "upload" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                📁 Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => setBannerMode("url")}
+                className={`flex-1 py-1 rounded-lg transition-all ${
+                  bannerMode === "url" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                🔗 Image URL
+              </button>
+            </div>
+
+            {/* Mode 1: Presets */}
+            {bannerMode === "preset" && (
+              <div className="grid grid-cols-1 gap-2 pt-1">
+                {BANNER_PRESETS.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setCoverBanner(b.class)}
+                    className={`relative h-10 rounded-xl px-3 flex items-center justify-between text-white text-xs font-bold shadow-2xs transition-all ${b.class} ${
+                      (coverBanner || BANNER_PRESETS[0].class) === b.class
+                        ? "ring-2 ring-blue-600 ring-offset-1 scale-[1.01]"
+                        : "opacity-80 hover:opacity-100"
+                    }`}
+                  >
+                    <span>{b.name}</span>
+                    {(coverBanner || BANNER_PRESETS[0].class) === b.class && (
+                      <span className="bg-white/30 backdrop-blur-xs px-2 py-0.5 rounded-full text-[10px]">
+                        Active ✓
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Mode 2: File Upload */}
+            {bannerMode === "upload" && (
+              <div className="space-y-2 pt-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerFileUpload}
+                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer"
+                />
+              </div>
+            )}
+
+            {/* Mode 3: Image URL Link */}
+            {bannerMode === "url" && (
+              <div className="space-y-1 pt-1">
+                <Input
+                  type="url"
+                  value={coverBanner.startsWith("http") ? coverBanner : ""}
+                  onChange={(e) => setCoverBanner(e.target.value)}
+                  placeholder="https://example.com/cover-banner.jpg"
+                />
+                <p className="text-[11px] text-slate-400">Paste any direct image link URL to set your cover banner.</p>
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Right Column: Editable Profile Form */}
