@@ -13,4 +13,8 @@ authRouter.get("/users/search", authController.search_users);
 authRouter.post("/friends/:username/:friendUsername", authController.add_friend);
 authRouter.delete("/friends/:username/:friendUsername", authController.remove_friend);
 
+// Message Synchronization & Offline Storage Endpoints
+authRouter.post("/messages/sync", authController.sync_messages);
+authRouter.post("/messages/send", authController.send_message);
+
 export default authRouter;
