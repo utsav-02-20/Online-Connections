@@ -1,4 +1,17 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/auth";
+const getApiBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    const trimmed = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+    return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
+  }
+  const port = process.env.NEXT_PUBLIC_BACKEND_PORT || "5000";
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname || "localhost";
+    return `http://${hostname}:${port}/api/auth`;
+  }
+  return `http://localhost:${port}/api/auth`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface FriendDetail {
   id: string;
