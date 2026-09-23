@@ -1,17 +1,17 @@
 const getApiBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    const trimmed = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (envUrl) {
+    const trimmed = envUrl.replace(/\/+$/, "");
     return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
   }
   const port = process.env.NEXT_PUBLIC_BACKEND_PORT || "5000";
   if (typeof window !== "undefined") {
+    const protocol = window.location.protocol || "http:";
     const hostname = window.location.hostname || "localhost";
-    return `http://${hostname}:${port}/api/auth`;
+    return `${protocol}//${hostname}:${port}/api/auth`;
   }
   return `http://localhost:${port}/api/auth`;
 };
-
-const API_BASE_URL = getApiBaseUrl();
 
 export interface FriendDetail {
   id: string;
@@ -62,7 +62,8 @@ export async function apiRequest<T = any>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...options,
     headers,
     credentials: "include",
