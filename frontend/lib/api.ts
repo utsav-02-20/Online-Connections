@@ -1,17 +1,4 @@
-const getApiBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-  if (envUrl) {
-    const trimmed = envUrl.replace(/\/+$/, "");
-    return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
-  }
-  const port = process.env.NEXT_PUBLIC_BACKEND_PORT || "5000";
-  if (typeof window !== "undefined") {
-    const protocol = window.location.protocol || "http:";
-    const hostname = window.location.hostname || "localhost";
-    return `${protocol}//${hostname}:${port}/api/auth`;
-  }
-  return `http://localhost:${port}/api/auth`;
-};
+const getApiBaseUrl = () => "/api/auth";
 
 export interface FriendDetail {
   id: string;
